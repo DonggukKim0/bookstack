@@ -1,0 +1,37 @@
+services:
+  mariadb:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: henplab-db
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - MYSQL_ROOT_PASSWORD=rootpass1234
+      - MYSQL_DATABASE=bookstack
+      - MYSQL_USER=bookstack
+      - MYSQL_PASSWORD=bookstackpass1234
+    volumes:
+      - ./db:/config
+    restart: unless-stopped
+
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: henplab-wiki
+    depends_on:
+      - mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - APP_URL=http://localhost:8888
+      - APP_KEY=base64:ALFsEfzEikspJ49DWoGdb/IlYwaZd7kHWpT81xP98BE=
+      - DB_HOST=henplab-db
+      - DB_PORT=3306
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD=bookstackpass1234
+      - DB_DATABASE=bookstack
+    volumes:
+      - ./bookstack:/config
+    ports:
+      - "8888:80"
+    restart: unless-stopped
