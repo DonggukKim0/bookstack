@@ -249,20 +249,79 @@ docker-compose up -d
 
 ---
 
-## 11) 백업 / 복구 기본  
-- **DB 덤프**  
+## 11) 백업 / 복구 (운영 권장 설정)
+
+BookStack은 **DB + 파일(첨부/이미지)** 두 가지를 모두 백업해야 완전 복구가 가능합니다.
+
+---
+
+### ✅ 1. DB 백업
+
 ```bash
-docker exec bookstack_db sh -c 'exec mysqldump -u${DB_USERNAME} -p"${DB_PASSWORD}" ${DB_DATABASE}' > /opt/henplab-wiki/backup/db_backup.sql
-```
-- **볼륨 백업**: `/opt/henplab-wiki/data/` 전체를 주기적으로 백업  
-- **크론 예시 (매일 3시 백업)**  
-```bash
-0 3 * * * /usr/bin/docker exec bookstack_db sh -c 'exec mysqldump -ubookstack -p"your_db_password" bookstack' > /opt/henplab-wiki/backup/db_backup_$(date +\%F).sql
+docker exec bookstack_db sh -c 'exec mariadb-dump -ubookstack -p"$MYSQL_PASSWORD" bookstack' | gzip > /opt/henplab-wiki/backup/db_$(date +%F).sql.gz
 ```
 
 ---
 
-## 12) 문제 해결 체크리스트  
+### ✅ 2. 파일(첨부/이미지) 백업
+
+BookStack의 업로드 파일과 설정은 `data/` 볼륨에 저장됩니다.
+
+```bash
+tar -czf /opt/henplab-wiki/backup/bookstack_files_$(date +%F).tar.gz -C /opt/henplab-wiki/data .
+```
+
+---
+
+### ✅ 3. 자동 백업 (cron 권장)
+
+크론 등록:
+
+```bash
+crontab -e
+```
+
+아래 3줄 추가:
+
+```bash
+# 매일 03:00 DB 백업
+0 3 * * * /usr/bin/docker exec bookstack_db sh -c 'exec mariadb-dump -ubookstack -p"$MYSQL_PASSWORD" bookstack' | /bin/gzip > /opt/henplab-wiki/backup/db_$(/bin/date +\%F).sql.gz
+
+# 매일 03:30 파일 백업
+30 3 * * * /bin/tar -czf /opt/henplab-wiki/backup/bookstack_files_$(/bin/date +\%F).tar.gz -C /opt/henplab-wiki/data .
+
+# 매일 04:00 7일 지난 백업 삭제
+0 4 * * * /usr/bin/find /opt/henplab-wiki/backup -type f -mtime +7 -delete
+```
+
+---
+
+### ✅ 4. 복구 방법
+
+#### DB 복구
+```bash
+gunzip -c db_YYYY-MM-DD.sql.gz | docker exec -i bookstack_db mysql -ubookstack -p bookstack
+```
+
+#### 파일 복구
+```bash
+tar -xzf bookstack_files_YYYY-MM-DD.tar.gz -C /opt/henplab-wiki/data
+```
+
+그 후 컨테이너 재시작:
+
+```bash
+docker-compose restart
+```
+
+---
+
+### 💡 운영 팁
+
+- DB만 백업하면 **첨부파일은 복구 불가**
+- 최소 7~14일치 백업 보관 권장
+- 가능하면 다른 서버나 NAS로 추가 백업 추천
+
 - **500 에러 발생 시**  
   - `.env` 파일의 `APP_KEY`가 올바른지 확인  
   - 컨테이너 로그 확인 (`docker-compose logs app`)  
