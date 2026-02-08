@@ -335,3 +335,13 @@ docker-compose restart
 ---
 
 이 가이드를 참고하여 안전하고 효율적으로 BookStack을 운영하세요!
+
+---
+
+## 🔚 마지막 운영 팁 (요약)
+
+- `.env` 수정 후에는 `docker-compose up -d --force-recreate`로 컨테이너를 재생성해야 환경변수가 반영됩니다.  
+- `APP_URL`을 변경했다면 캐시 문제를 의심하고 컨테이너 재시작 및 캐시 클리어를 진행하세요.  
+- **백업은 DB + 파일을 함께** 해야 완전 복구가 가능합니다.  
+- Cloudflare Tunnel / 리버스 프록시 사용 시 `APP_URL`과 실제 접속 URL을 반드시 일치시키세요.  
+- 문제 발생 시 가장 먼저 `docker-compose logs -f`로 로그를 확인하는 습관을 가지면 해결이 빠릅니다.
